@@ -57,23 +57,21 @@ brew  install  python
 
 ## 🛠️ Instalação e Execução
 
+### Faça o download do repositório
+1. Acesse a página de releases do projeto: [AtuArqDIRF Manual v1.0](https://github.com/pedromello99/ArqDirf-Manual-1--Ten-Mello/releases/tag/v1.0)
+2. Na seção "Assets", clique no arquivo `AtuArqDIRF-Manual-1-Ten-Mello-v1.0.zip` para baixá-lo
+3. Após o download, extraia o conteúdo do arquivo zip para uma pasta de sua escolha
+
   
 
 ### Windows
-
-1. Faça o download do repositório
-
-2. Execute o arquivo `setup_and_run.bat` com um duplo clique
-
-  
+1. Navegue até a pasta onde você extraiu os arquivos
+2. Dê um duplo clique no arquivo `setup_and_run.bat`
 
 ### Linux/Mac
-
-1. Faça o download do repositório
-
-2. Abra o terminal na pasta do projeto
-
-3. Execute o comando:
+1. Abra o terminal
+2. Navegue até a pasta onde você extraiu os arquivos usando o comando `cd`
+3. Execute os seguintes comandos:
 
 ```
 
