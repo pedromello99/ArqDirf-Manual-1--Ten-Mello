@@ -58,8 +58,8 @@ brew  install  python
 ## 🛠️ Instalação e Execução
 
 ### Faça o download do repositório
-1. Acesse a página de releases do projeto: [AtuArqDIRF Manual v1.0](https://github.com/pedromello99/ArqDirf-Manual-1--Ten-Mello/releases/tag/v1.0)
-2. Na seção "Assets", clique no arquivo `AtuArqDIRF-Manual-1-Ten-Mello-v1.0.zip` para baixá-lo
+1. Acesse a página de releases do projeto: [AtuArqDIRF Manual](https://github.com/pedromello99/ArqDirf-Manual-1--Ten-Mello/releases)
+2. Na seção "Assets", clique no arquivo `AtuArqDIRF-Manual-1-Ten-Mello.zip` da última versão para baixá-lo
 3. Após o download, extraia o conteúdo do arquivo zip para uma pasta de sua escolha
 
   
