@@ -66,7 +66,7 @@ brew  install  python
 
 ### Windows
 1. Navegue até a pasta onde você extraiu os arquivos
-2. Dê um duplo clique no arquivo `setup_and_run.bat`
+2. Dê um duplo clique no arquivo `Windows_setup_and_run.bat`
 
 ### Linux/Mac
 1. Abra o terminal
@@ -75,9 +75,9 @@ brew  install  python
 
 ```
 
-chmod +x setup_and_run.sh
+chmod +x Linux_MacOS_setup_and_run.sh
 
-./setup_and_run.sh
+./Linux_MacOS_setup_and_run.sh
 
 ```
 
