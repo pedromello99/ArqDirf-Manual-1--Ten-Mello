@@ -1,0 +1,51 @@
+# Arquivos de texto
+*.txt
+!requirements.txt
+!README.md
+
+# Arquivos de ambiente e configuração
+.env
+*.env
+
+# Arquivos CSV
+*.csv
+
+# Arquivos de log
+*.log
+
+# Diretórios de ambiente virtual
+venv/
+env/
+.venv/
+.env/
+
+# Arquivos de cache do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Arquivos de distribuição / empacotamento
+dist/
+build/
+*.egg-info/
+
+# IDEs e editores
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos de backup
+*.bak
+*.backup
+
+# Arquivos de sessão
+*.session
+
+# Arquivos gerados pelo projeto
+*.1Ten_Mello.txt
+favorecidos_com_erro.csv
