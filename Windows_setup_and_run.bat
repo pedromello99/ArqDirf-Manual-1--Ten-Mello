@@ -16,6 +16,9 @@ call venv\Scripts\activate
 REM Instala as dependências
 pip install -r requirements.txt
 
+REM limpa a tela
+cls
+
 REM Executa o script Python
 python main.py
 

@@ -16,6 +16,9 @@ source venv/bin/activate
 # Instala as dependências
 pip install -r requirements.txt
 
+# Limpa a tela
+clear
+
 # Executa o script Python
 python3 main.py
 
