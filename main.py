@@ -16,9 +16,6 @@ from pymongo import MongoClient
 from datetime import datetime
 from cryptography.fernet import Fernet
 
-
-
-
 load_dotenv()
 
 console = Console()
@@ -38,12 +35,30 @@ def get_login_senha():
     while len(login) != 11:
         console.print("[bold red]CPF inválido. Deve conter 11 dígitos.[/bold red]")
         login = console.input("[cyan]Digite o login do SAG: [/cyan]")
-    # senha = console.input("[cyan]Digite a senha do SAG: [/cyan]", password=True)
+    senha = console.input("[cyan]Digite a senha do SAG (os caracteres não vão aparecer): [/cyan]", password=True)
     os.environ['LOGIN'] = login
-    # os.environ['SENHA'] = senha
-    return login 
+    os.environ['SENHA'] = senha
+    return login, senha
 
-def get_obs(login):
+def make_login(login, senha):
+    headers = {
+    'Accept': 'text/html, */*; q=0.01',
+    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+    }
+
+    data = f'cpf={login}&senha= {senha}'
+
+    response = requests.post('https://sag.eb.mil.br/login.php', 
+                            headers=headers, 
+                            data=data)
+    if '0' in response.text:
+        return None
+    else:
+        os.environ['hash'] = response.cookies.get_dict()['hash']
+        tokenhash = response.cookies.get_dict()['hash']
+        return tokenhash
+
+def get_obs(login, tokenhash):
     params = {
         'metodo': 'tela',
         'DATAINI': '',
@@ -93,6 +108,7 @@ def get_obs(login):
 
     cookies = {
         'cpf': login,
+        'hash': tokenhash,
     }
 
     response = requests.get('https://sag.eb.mil.br/php/chamadas/docObuq.php', 
@@ -167,11 +183,12 @@ def enviar_dados_para_mongodb(login, ugs):
     client.close()
 
 
-def getCREDOR(login, credor):
+def getCREDOR(login, credor, tokenhash):
     import requests
 
     cookies = {
         'cpf': login,
+        'hash': tokenhash,
     }
 
     params = {
@@ -194,7 +211,7 @@ def getCREDOR(login, credor):
         # print('Erro ao buscar credor ', credor)
         return None
 
-def getDARF(login):
+def getDARF(login, tokenhash):
     params = {
         'metodo': 'tela',
         'DATAINI': '',
@@ -244,6 +261,7 @@ def getDARF(login):
 
     cookies = {
         'cpf': login,
+        'hash': tokenhash,
     }
 
     response = requests.get('https://sag.eb.mil.br/php/chamadas/docDfuq.php', 
@@ -253,6 +271,9 @@ def getDARF(login):
     if response.status_code != 200:
         return None
     listaobs = []
+    if "SENHOR NÃO TEM PERMISSÃO PARA ACESSAR ESTA PÁGINA" in response.text:
+        return None
+
     for item in response.json()['data']:
         ug = item[0]
         soup = BeautifulSoup(item[1], 'html.parser')
@@ -277,9 +298,10 @@ def getDARF(login):
 
 
 
-def get_doc_info(login, id):
+def get_doc_info(login, id, tokenhash):
     cookies = {
         'cpf': login,
+        'hash': tokenhash,
     }
     params = {
         'chave': id,
@@ -337,9 +359,10 @@ def get_doc_info(login, id):
     return mapeamento
 
 
-def getUG(login, ug):
+def getUG(login, ug, tokenhash):
     cookies = {
         'cpf': login,
+        'hash': tokenhash,
     }
     params = {
         'tipo': 'ug',
@@ -366,11 +389,11 @@ def validar_cnpj(cnpj):
 def limpatexto(texto):
     return bytes(texto.strip(), 'ISO-8859-1').decode('utf-8', 'ignore')
 
-def processa_ob(login, item):
+def processa_ob(login, item, tokenhash):
     i = item[0]
     row = item[1]
     id = row['id']
-    doc = get_doc_info(login, id)
+    doc = get_doc_info(login, id, tokenhash)
     if doc:
         return i, doc
 
@@ -391,19 +414,35 @@ def main():
     load_dotenv()
     
     login = os.getenv('LOGIN')
-    # senha = os.getenv('SENHA')
+    senha = os.getenv('SENHA')
     
-    if login is None:
-        login = get_login_senha()
+    if login is None and senha is None:
+        login, senha = get_login_senha()
         
         # Salvando as credenciais no arquivo .env
         set_key(env_file, 'LOGIN', login)
+        set_key(env_file, 'SENHA', senha)
         # set_key(env_file, 'SENHA', senha)
         console.print("[green]Credenciais salvas no arquivo .env[/green]")
-    
+
+
+    # Verifica se existe um tokenhash no arquivo .env
+    tokenhash = os.getenv('hash')
+    if tokenhash is None:
+        # Verificar se o login e senha são válidos
+        with console.status("[bold green]Verificando credenciais...[/bold green]"):
+            console.print("[yellow]Verificando credenciais de acesso ao SAG...[/yellow]")
+            tokenhash = make_login(login, senha)
+            if tokenhash is None:
+                console.print("[bold red]Erro ao verificar credenciais. Verifique o CPF e a senha e tente novamente.[/bold red]")
+                os.remove(env_file)
+                return
+            console.print("[green]Credenciais válidas![/green]")
+            set_key(env_file, 'hash', tokenhash)
+
     with console.status("[bold green]Iniciando processamento...[/bold green]"):
         console.print("[yellow]Obtendo dados do DARF...[/yellow]")
-        df = getDARF(login)
+        df = getDARF(login, tokenhash)
         if df is None:
             console.print("[bold red]Erro ao obter dados do DARF. Verifique se o CPF informado tem acesso ao SAG e tente novamente.[/bold red]")
             os.remove(env_file)
@@ -432,7 +471,7 @@ def main():
         
         try:
             with ThreadPoolExecutor(max_workers=treads) as executor:
-                results = [executor.submit(processa_ob, login, item) for item in df.iterrows()]
+                results = [executor.submit(processa_ob, login, item, tokenhash) for item in df.iterrows()]
                 for f in as_completed(results):
                     progress.update(task, advance=1)
                 freteList = [f.result() for f in results if f.result() is not None]
@@ -443,7 +482,6 @@ def main():
             return
     
     console.print("[green]Extraindo nome dos credores...[/green]")
-    1234
     for item in freteList:
         i = item[0]
         doc = item[1]
@@ -472,7 +510,7 @@ def main():
         
         allcredores = {}
         for credor in credores:
-            resultado = getCREDOR(login, credor)
+            resultado = getCREDOR(login, credor, tokenhash)
             if resultado:
                 allcredores[credor] = resultado
             else:
@@ -498,14 +536,14 @@ def main():
             for i, row in df.loc[df['favorecido'].isnull()].iterrows():
                 if row['ob'] == None:
                     continue
-                doc = get_doc_info(login, row['ob'])
+                doc = get_doc_info(login, row['ob'], tokenhash)
                 if doc:
                     for key in doc.keys():
                         if 'DADOS DA' in key:
                             novo_cnpj = doc[key]['IT_CO_FAVORECIDO']
                             if novo_cnpj != df.loc[i, 'cpf/cnpj']:
                                 df.loc[i, 'cpf/cnpj'] = novo_cnpj
-                                resultado = getCREDOR(login, df.loc[i, 'cpf/cnpj'])
+                                resultado = getCREDOR(login, df.loc[i, 'cpf/cnpj'], tokenhash)
                                 if resultado:
                                     df.loc[i, 'favorecido'] = resultado['NOME']
                                 else:
@@ -552,7 +590,7 @@ def main():
     enviar_dados_para_mongodb(login, ugs)
     
     for ug in ugs.keys():
-        dadosug = getUG(login, ug)
+        dadosug = getUG(login, ug, tokenhash)
         if len(dadosug["CNPJ"]) < 14:
             dadosug["CNPJ"] = "0" + dadosug["CNPJ"]
         
