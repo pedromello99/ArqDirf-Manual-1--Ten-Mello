@@ -48,7 +48,7 @@ def make_login(login, senha):
 
     data = f'cpf={login}&senha= {senha}'
 
-    response = requests.post('https://sag.eb.mil.br/login.php', 
+    response = requests.post('https://sag.eb.mil.br/sag2024/login.php', 
                             headers=headers, 
                             data=data)
     if '0' in response.text:
@@ -111,7 +111,7 @@ def get_obs(login, tokenhash):
         'hash': tokenhash,
     }
 
-    response = requests.get('https://sag.eb.mil.br/php/chamadas/docObuq.php', 
+    response = requests.get('https://sag.eb.mil.br/sag2024/php/chamadas/docObuq.php', 
                             params=params, 
                             cookies=cookies, 
                             )
@@ -195,7 +195,7 @@ def getCREDOR(login, credor, tokenhash):
         'credor': credor,
     }
 
-    response = requests.get('https://sag.eb.mil.br/php/chamadas/apoio.php', 
+    response = requests.get('https://sag.eb.mil.br/sag2024/php/chamadas/apoio.php', 
                             params=params, 
                             cookies=cookies)
     if response.status_code == 200:
@@ -264,7 +264,7 @@ def getDARF(login, tokenhash):
         'hash': tokenhash,
     }
 
-    response = requests.get('https://sag.eb.mil.br/php/chamadas/docDfuq.php', 
+    response = requests.get('https://sag.eb.mil.br/sag2024/php/chamadas/docDfuq.php', 
                             params=params, 
                             cookies=cookies, 
                             )
@@ -273,7 +273,6 @@ def getDARF(login, tokenhash):
     listaobs = []
     if "SENHOR NÃO TEM PERMISSÃO PARA ACESSAR ESTA PÁGINA" in response.text:
         return None
-
     for item in response.json()['data']:
         ug = item[0]
         soup = BeautifulSoup(item[1], 'html.parser')
@@ -306,7 +305,7 @@ def get_doc_info(login, id, tokenhash):
     params = {
         'chave': id,
     }
-    response = requests.get('https://sag.eb.mil.br/php/chamadas/doc.php', params=params, cookies=cookies)
+    response = requests.get('https://sag.eb.mil.br/sag2024/php/chamadas/doc.php', params=params, cookies=cookies)
     if response.status_code != 200:
         return None
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -368,7 +367,7 @@ def getUG(login, ug, tokenhash):
         'tipo': 'ug',
         'ug': ug,
     }
-    response = requests.get('https://sag.eb.mil.br/php/chamadas/ug.php',
+    response = requests.get('https://sag.eb.mil.br/sag2024/php/chamadas/ug.php',
                              params=params, 
                              cookies=cookies, 
                              )
@@ -426,19 +425,18 @@ def main():
         console.print("[green]Credenciais salvas no arquivo .env[/green]")
 
 
-    # Verifica se existe um tokenhash no arquivo .env
-    tokenhash = os.getenv('hash')
-    if tokenhash is None:
-        # Verificar se o login e senha são válidos
-        with console.status("[bold green]Verificando credenciais...[/bold green]"):
-            console.print("[yellow]Verificando credenciais de acesso ao SAG...[/yellow]")
-            tokenhash = make_login(login, senha)
-            if tokenhash is None:
-                console.print("[bold red]Erro ao verificar credenciais. Verifique o CPF e a senha e tente novamente.[/bold red]")
-                os.remove(env_file)
-                return
-            console.print("[green]Credenciais válidas![/green]")
-            set_key(env_file, 'hash', tokenhash)
+    # # Verifica se existe um tokenhash no arquivo .env
+    # if tokenhash is None:
+    #     # Verificar se o login e senha são válidos
+    with console.status("[bold green]Verificando credenciais...[/bold green]"):
+        console.print("[yellow]Verificando credenciais de acesso ao SAG...[/yellow]")
+        tokenhash = make_login(login, senha)
+        if tokenhash is None:
+            console.print("[bold red]Erro ao verificar credenciais. Verifique o CPF e a senha e tente novamente.[/bold red]")
+            os.remove(env_file)
+            return
+        console.print("[green]Credenciais válidas![/green]")
+        set_key(env_file, 'hash', tokenhash)
 
     with console.status("[bold green]Iniciando processamento...[/bold green]"):
         console.print("[yellow]Obtendo dados do DARF...[/yellow]")
@@ -535,6 +533,7 @@ def main():
             
             for i, row in df.loc[df['favorecido'].isnull()].iterrows():
                 if row['ob'] == None:
+                    progress.update(task, advance=1)
                     continue
                 doc = get_doc_info(login, row['ob'], tokenhash)
                 if doc:
@@ -550,13 +549,15 @@ def main():
                                     continue
                 progress.update(task, advance=1)
     favorecidos_com_error = df.loc[df['favorecido'].isnull()]['cpf/cnpj'].unique()
+    # Adiciona favorecidos com erro se o tamanho do CNPJ for 6
+    
     if favorecidos_com_error.shape[0] > 0:
         console.print(f"[yellow]Favorecidos com erro:{len(favorecidos_com_error)}[/yellow]")
         console.print("[cyan]Favor verificar manualmente os favorecidos com erro[/cyan]")
         for favorecido in favorecidos_com_error:
             if favorecido == None or favorecido == '':
                 continue
-            if len(favorecido) == 6:
+            if len(str(favorecido)) == 6:
                 console.print("[cyan]Foi encontrado uma UG no campo favorecido[/cyan]")
                 novo_cnpj = console.input(f'[cyan]Informe o [green]CNPJ[/green] para a UG {favorecido}: [/cyan]')
                 cnpj_valido = validar_cnpj(novo_cnpj)
@@ -570,6 +571,24 @@ def main():
                 continue
             novo_favorecido = console.input(f"[cyan]Informe o [green]NOME[/green] do favorecido para o CNPJ {favorecido}: [/cyan]")        
             df.loc[df['cpf/cnpj'] == favorecido, 'favorecido'] = limpatexto(novo_favorecido.upper())
+
+
+    favorecidos_com_error = df.loc[df['cpf/cnpj'].astype(str).str.len() == 6]['cpf/cnpj'].unique()
+    if favorecidos_com_error.shape[0] > 0:
+        console.print(f"[yellow]Foram encontradas {len(favorecidos_com_error)} UG no lugar de CNPJ [/yellow]")
+        console.print("[cyan]Favor informar o CNPJ manualmente para os favorecidos abaixo[/cyan]")
+        for favorecido in favorecidos_com_error:
+            novo_cnpj = console.input(f'[cyan]Informe o [green]CNPJ[/green] para a UG {favorecido}: [/cyan]')
+            cnpj_valido = validar_cnpj(novo_cnpj)
+            while cnpj_valido is None:
+                console.print("[bold red]CNPJ inválido. Deve conter exatamente 14 dígitos numéricos.[/bold red]")
+                novo_cnpj = console.input(f'[cyan]Informe o [green]CNPJ[/green] para a UG {favorecido}: [/cyan]')
+                cnpj_valido = validar_cnpj(novo_cnpj)
+            df.loc[df['cpf/cnpj'] == favorecido, 'cpf/cnpj'] = novo_cnpj
+            novo_favorecido = console.input(f"[cyan]Informe o [green]NOME[/green] do favorecido para o CNPJ {novo_cnpj}: [/cyan]")    
+            df.loc[df['cpf/cnpj'] == novo_cnpj, 'favorecido'] = limpatexto(novo_favorecido.upper())
+
+    # Adiciona favorecidos com erro se o tamanho do CNPJ for 6
 
     favorecidos_com_error = df.loc[df['favorecido'].isnull()]['favorecido'].unique()
     if favorecidos_com_error.shape[0] > 0:
@@ -587,14 +606,14 @@ def main():
         ugs[ug] = df.loc[df['ug'] == ug]
     
     console.print("[cyan]Gerando arquivos para DIRF, aguarde...[/cyan]")
-    enviar_dados_para_mongodb(login, ugs)
+    # enviar_dados_para_mongodb(login, ugs)
     
     for ug in ugs.keys():
         dadosug = getUG(login, ug, tokenhash)
         if len(dadosug["CNPJ"]) < 14:
             dadosug["CNPJ"] = "0" + dadosug["CNPJ"]
         
-        line1 = f'DIRF|2024|2023|N||B3VH8RQ|\n'
+        line1 = f'DIRF|2025|2024|N||R6GP3ZA|\n'
         line2 = f'RESPO|{dadosug["CPF_TES_T"]}|{dadosug["NOME_TES_T"]}|99|99999999|999999|99999999||\n'
         line3 = f'DECPJ|{dadosug["CNPJ"]}|{limpatexto(dadosug["NOME_UG"])}|1|{dadosug["CPF_OD_T"]}|N|N|N|N|N|N|N|N||\n'
         

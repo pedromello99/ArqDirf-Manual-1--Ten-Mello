@@ -95,13 +95,10 @@ chmod +x Linux_MacOS_setup_and_run.sh
 
 ## 📅 Ano Calendário
 
-- O layout atual do arquivo é baseado no ano calendário 2024/2023
-
-- Para o ano calendário 2025/2024, consulte:
+- O layout atual do arquivo é baseado no ano calendário 2025/2024
 
 - [Layout DIRF - Receita Federal](https://www.gov.br/receitafederal/pt-br/centrais-de-conteudo/publicacoes/documentos-tecnicos/dirf)
 
-- O programa será atualizado assim que o novo layout estiver disponível
 
   
 
